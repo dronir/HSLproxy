@@ -48,7 +48,7 @@ class Settings:
 class Departure(BaseModel):
     stop: str
     line: str
-    destination: str
+    destination: Optional[str]
     scheduled: datetime
     estimated: Optional[datetime]
 
