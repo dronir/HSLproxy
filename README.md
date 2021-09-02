@@ -23,4 +23,7 @@ to see the API documentation.
 
 ### Deploy with Docker
 
-TODO.
+- Build the dockerfile with: `docker build -t hslproxy .`
+
+- Run `docker run -d -p --name HSLproxy 8000:80 hslproxy`
+  and the app should be listening on port 8000 of your local machine.
