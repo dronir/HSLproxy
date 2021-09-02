@@ -21,9 +21,16 @@ Running `pipenv run uvicorn main:app` starts the service on the
 local machine. Navigate to [http://127.0.0.1:8000/docs]
 to see the API documentation.
 
+Setting the environment variable `HSLPROXY_LOG_LEVEL=DEBUG` will
+enable more detailed logging.
+
 ### Deploy with Docker
 
 - Build the dockerfile with: `docker build -t hslproxy .`
 
-- Run `docker run -d -p --name HSLproxy 8000:80 hslproxy`
-  and the app should be listening on port 8000 of your local machine.
+- Run `docker run -d --name HSLproxy -p 8000:80 hslproxy`
+  and the app should now be running on port 8000 of your Docker host.
+
+- For debug output, add `--env HSLPROXY_LOG_LEVEL=DEBUG` to the command
+  before the last `hslproxy`.
+  You can examine the logs with `docker logs HSLproxy`

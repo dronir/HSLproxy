@@ -5,12 +5,26 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from string import Template
 from itertools import islice
+from pprint import pformat
+import os
 import logging
 import aiohttp
 
-app = FastAPI()
+LOG_LEVEL_DICT = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR
+}
 
-logging.basicConfig(level=logging.WARNING)
+env_log_level = os.environ.get("HSLPROXY_LOG_LEVEL", "WARNING")
+actual_log_level = LOG_LEVEL_DICT.get(env_log_level, "WARNING")
+
+log = logging.getLogger("HSLproxy")
+log.setLevel(actual_log_level)
+log.addHandler(logging.StreamHandler())
+
+app = FastAPI()
 
 
 # First a simple ping endpoint that returns the current datetime in UTC
@@ -69,16 +83,17 @@ async def departure_proxy(stops: str, n: int = 5):
     The number `n` is the total number of results returned. The resulting
     departures will be sorted by the _real-time estimate_ of the departure time.
     """
-    logging.debug(f"Request for {n} departures from: {stops}.")
+    log.debug(f"Request for {n} departures from: '{stops}'.")
     raw_data = await get_departures(stops, n)
     # TODO: Validate result based on HSL API schema?
-    logging.debug(raw_data)
+    log.debug("HSL API returned the following:")
+    log.debug(pformat(raw_data))
     try:
         return parse_json(raw_data, n)
     except HTTPException as E:
         raise E
     except Exception as E:
-        logging.error(f"Parsing response from HSL API failed.")
+        log.error(f"Parsing response from HSL API failed.")
         raise HTTPException(status_code=500, detail="Received response from HSL API but failed to parse it.")
 
 
@@ -94,11 +109,11 @@ async def get_departures(stops: str, n: int) -> dict:
                 if response.status == 200:
                     return await response.json()
                 else:
-                    logging.error(f"HTTP error {response.status} when fetching data.")
+                    log.error(f"HTTP error {response.status} when fetching data.")
                     raise HTTPException(status_code=502, 
                                         detail=f"Request to HSL API failed with code {response.status}.")
     except aiohttp.ClientConnectorError as E:
-        logging.error(f"Error while retrieving data: {E}")
+        log.error(f"Error while retrieving data: {E}")
         raise HTTPException(status_code=500, detail="Unexpected error when fetching data from HSL.")
 
 
@@ -113,6 +128,8 @@ def parse_json(raw_data: dict, n: int) -> dict:
         all_departures += [single_departure(d) for d in stop["stoptimesWithoutPatterns"]]
 
     departures = list(islice(sorted(all_departures, key=lambda x: x["estimated"]), n))
+    log.debug("Parsed the HSL data into the following output:")
+    log.debug(pformat(departures))
     return {"departures": departures, "timestamp": datetime.utcnow()}
 
 
