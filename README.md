@@ -44,6 +44,9 @@ will return something like:
 }
 ```
 
+Note that all timestamps returned are in UTC.
+
+
 ## Installation and usage
 
 ### Installation using Pipenv
