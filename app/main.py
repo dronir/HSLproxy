@@ -82,6 +82,8 @@ async def departure_proxy(stops: str, n: int = 5):
 
     The number `n` is the total number of results returned. The resulting
     departures will be sorted by the _real-time estimate_ of the departure time.
+    
+    Note that all timestamps are in UTC.
     """
     log.debug(f"Request for {n} departures from: '{stops}'.")
     raw_data = await get_departures(stops, n)
