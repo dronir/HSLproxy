@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List, Any, Dict, Tuple
+from typing import Optional, List, Any, Dict
 from datetime import datetime
 from string import Template
 from itertools import islice
@@ -88,7 +88,7 @@ async def departure_proxy(stops: str, n: int = 5):
     the string "malm" will match "Malmin asema", "Malmin tori" etc.
 
     The number `n` is the total number of results returned. The resulting
-    departures will be sorted by the _real-time estimate_ of the departure time.
+    departures will be sorted by the _real-time estimate_ of the departure.
 
     Note that all timestamps are in UTC.
     """
@@ -147,23 +147,19 @@ def parse_json(raw_data: JsonLike, n: int) -> DepartureList:
 def single_departure(data: JsonLike) -> Departure:
     """Clean up a single departure from the HSL JSON.
     """
-    scheduled, estimate = get_timestamps(data)
+    scheduled = get_timestamp(data, "scheduledDeparture")
+    estimated = get_timestamp(data, "realtimeDeparture")
     stop_code = data["stop"]["code"]
     stop_name = data["stop"]["name"]
     return Departure(stop=f"{stop_code} {stop_name}",
                      line=data["trip"]["route"]["shortName"],
                      destination=data["headsign"],
                      scheduled=scheduled,
-                     estimated=estimate
+                     estimated=estimated
                      )
 
 
-def get_timestamps(departure: JsonLike) -> Tuple[datetime, datetime]:
-    """Get scheduled/realtime departure datetimes from JSON.
-    """
+def get_timestamp(departure: JsonLike, key: str) -> datetime:
     day_start_unix = departure['serviceDay']
-    scheduled_time = departure['scheduledDeparture']
-    real_time = departure['realtimeDeparture']
-    datetime_scheduled = datetime.utcfromtimestamp(day_start_unix + scheduled_time)
-    datetime_realtime = datetime.utcfromtimestamp(day_start_unix + real_time)
-    return datetime_scheduled, datetime_realtime
+    ts = departure[key]
+    return datetime.utcfromtimestamp(day_start_unix + ts)
