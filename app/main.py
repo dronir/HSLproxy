@@ -65,18 +65,18 @@ class Departure(BaseModel):
     line: str
     destination: Optional[str]
     scheduled: datetime
-    estimated: Optional[datetime]
+    estimated: datetime
 
     def best_time(self):
         return self.scheduled if self.estimated is None else self.estimated
 
     def __lt__(self, other: Departure):
-        self.best_time() < other.best_time()
+        return self.best_time() < other.best_time()
 
 
 class DepartureList(BaseModel):
     departures: List[Departure]
-    timestamp: Optional[datetime]
+    timestamp: datetime
 
 
 JsonLike = Dict[str, Any]
@@ -92,7 +92,7 @@ async def departure_proxy(stops: str, n: int = 5):
 
     The number `n` is the total number of results returned. The resulting
     departures will be sorted by the _real-time estimate_ of the departure time.
-    
+
     Note that all timestamps are in UTC.
     """
     log.debug(f"Request for {n} departures from: '{stops}'.")
@@ -144,8 +144,7 @@ def parse_json(raw_data: JsonLike, n: int) -> DepartureList:
     departures = list(islice(sorted(all_departures), n))
     log.debug("Parsed the HSL data into the following output:")
     log.debug(pformat(departures))
-    return DepartureList.parse_obj({"departures": departures,
-                                    "timestamp": datetime.utcnow()})
+    return DepartureList(departures=departures, timestamp=datetime.utcnow())
 
 
 def single_departure(data: JsonLike) -> Departure:
@@ -154,12 +153,12 @@ def single_departure(data: JsonLike) -> Departure:
     scheduled, estimate = get_timestamps(data)
     stop_code = data["stop"]["code"]
     stop_name = data["stop"]["name"]
-    return Departure.parse_obj({"stop": f"{stop_code} {stop_name}",
-                                "line": data["trip"]["route"]["shortName"],
-                                "destination": data["headsign"],
-                                "scheduled": scheduled,
-                                "estimated": estimate
-                                })
+    return Departure(stop=f"{stop_code} {stop_name}",
+                     line=data["trip"]["route"]["shortName"],
+                     destination=data["headsign"],
+                     scheduled=scheduled,
+                     estimated=estimate
+                     )
 
 
 def get_timestamps(departure: JsonLike) -> Tuple[datetime, datetime]:
