@@ -1,8 +1,9 @@
-from os import stat_result
+from __future__ import annotations
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
-from datetime import datetime, timedelta
+from typing import Optional, List, Any, Dict, Tuple
+from datetime import datetime
 from string import Template
 from itertools import islice
 from pprint import pformat
@@ -45,7 +46,7 @@ async def index():
 
 class Settings:
     url = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
-    graphql_template = Template("""{  
+    graphql_template = Template("""{
   stops(name: "$stopname") {
     stoptimesWithoutPatterns(numberOfDepartures: $n_departures) {
       stop {name code}
@@ -66,10 +67,19 @@ class Departure(BaseModel):
     scheduled: datetime
     estimated: Optional[datetime]
 
+    def best_time(self):
+        return self.scheduled if self.estimated is None else self.estimated
+
+    def __lt__(self, other: Departure):
+        self.best_time() < other.best_time()
+
 
 class DepartureList(BaseModel):
     departures: List[Departure]
     timestamp: Optional[datetime]
+
+
+JsonLike = Dict[str, Any]
 
 
 @app.get("/departures", response_model=DepartureList)
@@ -95,11 +105,12 @@ async def departure_proxy(stops: str, n: int = 5):
     except HTTPException as E:
         raise E
     except Exception as E:
-        log.error(f"Parsing response from HSL API failed.")
-        raise HTTPException(status_code=500, detail="Received response from HSL API but failed to parse it.")
+        log.error(f"Parsing response from HSL API failed: {E}")
+        raise HTTPException(status_code=500,
+                            detail="Received response from HSL API but failed to parse it.")
 
 
-async def get_departures(stops: str, n: int) -> dict:
+async def get_departures(stops: str, n: int) -> JsonLike:
     """Make HTTP request to the HSL API and return the result.
     """
     query = Settings.graphql_template.substitute(stopname=stops, n_departures=n)
@@ -112,14 +123,15 @@ async def get_departures(stops: str, n: int) -> dict:
                     return await response.json()
                 else:
                     log.error(f"HTTP error {response.status} when fetching data.")
-                    raise HTTPException(status_code=502, 
+                    raise HTTPException(status_code=502,
                                         detail=f"Request to HSL API failed with code {response.status}.")
     except aiohttp.ClientConnectorError as E:
         log.error(f"Error while retrieving data: {E}")
-        raise HTTPException(status_code=500, detail="Unexpected error when fetching data from HSL.")
+        raise HTTPException(status_code=500,
+                            detail="Unexpected error when fetching data from HSL.")
 
 
-def parse_json(raw_data: dict, n: int) -> dict:
+def parse_json(raw_data: JsonLike, n: int) -> DepartureList:
     """Parse JSON from HSL API into a DepartureResponse.
     """
     found_stops = raw_data["data"]["stops"]
@@ -129,27 +141,28 @@ def parse_json(raw_data: dict, n: int) -> dict:
     for stop in found_stops:
         all_departures += [single_departure(d) for d in stop["stoptimesWithoutPatterns"]]
 
-    departures = list(islice(sorted(all_departures, key=lambda x: x["estimated"]), n))
+    departures = list(islice(sorted(all_departures), n))
     log.debug("Parsed the HSL data into the following output:")
     log.debug(pformat(departures))
-    return {"departures": departures, "timestamp": datetime.utcnow()}
+    return DepartureList.parse_obj({"departures": departures,
+                                    "timestamp": datetime.utcnow()})
 
 
-def single_departure(data: dict) -> dict:
+def single_departure(data: JsonLike) -> Departure:
     """Clean up a single departure from the HSL JSON.
     """
     scheduled, estimate = get_timestamps(data)
     stop_code = data["stop"]["code"]
     stop_name = data["stop"]["name"]
-    return {"stop": f"{stop_code} {stop_name}",
-            "line": data["trip"]["route"]["shortName"],
-            "destination": data["headsign"],
-            "scheduled": scheduled,
-            "estimated": estimate
-            }
+    return Departure.parse_obj({"stop": f"{stop_code} {stop_name}",
+                                "line": data["trip"]["route"]["shortName"],
+                                "destination": data["headsign"],
+                                "scheduled": scheduled,
+                                "estimated": estimate
+                                })
 
 
-def get_timestamps(departure):
+def get_timestamps(departure: JsonLike) -> Tuple[datetime, datetime]:
     """Get scheduled/realtime departure datetimes from JSON.
     """
     day_start_unix = departure['serviceDay']
