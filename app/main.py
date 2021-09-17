@@ -67,11 +67,8 @@ class Departure(BaseModel):
     scheduled: datetime
     estimated: datetime
 
-    def best_time(self):
-        return self.scheduled if self.estimated is None else self.estimated
-
     def __lt__(self, other: Departure):
-        return self.best_time() < other.best_time()
+        return self.estimated < other.estimated
 
 
 class DepartureList(BaseModel):
