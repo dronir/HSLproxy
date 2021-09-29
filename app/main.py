@@ -132,8 +132,6 @@ def parse_json(raw_data: JsonLike, n: int) -> DepartureList:
     """Parse JSON from HSL API into a DepartureResponse.
     """
     found_stops = raw_data["data"]["stops"]
-    if len(found_stops) == 0:
-        raise HTTPException(status_code=404, detail="No stops matching the query were found.")
     all_departures = []
     for stop in found_stops:
         all_departures += [single_departure(d) for d in stop["stoptimesWithoutPatterns"]]
