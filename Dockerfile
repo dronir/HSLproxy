@@ -1,10 +1,13 @@
 FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8-slim
 
-COPY ./app /app
-COPY Pipfile Pipfile
-COPY Pipfile.lock Pipfile.lock
+RUN pip install poetry
 
-RUN pip install --upgrade pip
-RUN pip install pipenv 
 
-RUN pipenv install --system --deploy
+WORKDIR /project
+COPY poetry.lock .
+COPY pyproject.toml .
+RUN poetry config virtualenvs.create false
+RUN poetry install --no-root --no-dev
+COPY . /project
+RUN ln -s /project/app /app
+

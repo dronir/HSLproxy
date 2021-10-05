@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "hslproxy"
+version = "0.1.0"
+description = "Simple HTTP proxy to get list of departures for a bus stop from the HSL API."
+authors = ["Olli Wilkman <olli.wilkman@iki.fi>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+aiohttp = "*"
+uvicorn = "*"
+fastapi = "*"
+pydantic = "*"
+
+[tool.poetry.dev-dependencies]
+flake8 = "*"
+mypy = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
