@@ -1,19 +1,19 @@
 
 # HSL departure proxy
 
-This is a simple web API for departures from public 
-transportation stops in the greater Helsinki area.
+This is a simple web API for departures from public transportation stops in the
+greater Helsinki area.
 
-You can make a request to this service with the name of a stop,
-and it will call the official HSL API, get the next departures
-from that stop and return them to you in a simple JSON format.
+You can make a request to this service with the name of a stop, and it will
+call the official HSL API, get the next departures from that stop and return
+them to you in a simple JSON format.
 
-The list of departures contains the stop names, bus/tram/train
-lines with their destinations, the scheduled departure time
-and the real-time estimate for the actual departure time.
+The list of departures contains the stop names, bus/tram/train lines with their
+destinations, the scheduled departure time and the real-time estimate for the
+actual departure time.
 
-For example, a request to this API such as `/departures?stops=H3030&n=3`
-will return something like:
+For example, a request to this API such as `/departures?stops=H3030&n=3` will
+return something like:
 
 ```json
 {
@@ -49,26 +49,30 @@ Note that all timestamps returned are in UTC.
 
 ## Installation and usage
 
-### Installation using Poetry
+### Installation using [Poetry](https://python-poetry.org)
 
-Running`poetry install` creates a virtualenv and installs
-the dependencies.
+Also Python 3.8+ (might work on earlier but I haven't tested.
+
+Running`poetry install` creates a virtualenv and installs the dependencies.
+
+If you want to make an environment for it manually, the deps are `aiohttp`,
+`uvicorn`, `fastapi` and `pydantic` (see [the project file](./pyproject.toml)).
 
 ### Running locally
 
-Running `poetry run uvicorn main:app` in the `app/` directory starts
-the service on the  local machine. Navigate to 
-[http://127.0.0.1:8000/docs] to see the API documentation.
+Running `poetry run uvicorn main:app` in the `app/` directory starts the
+service on the  local machine. Navigate to [http://127.0.0.1:8000/docs] to see
+the API documentation.
 
-Setting the environment variable `HSLPROXY_LOG_LEVEL=DEBUG` will
-enable more detailed logging.
+Setting the environment variable `HSLPROXY_LOG_LEVEL=DEBUG` will enable more
+detailed logging.
 
 ### Deploy with Docker 
 
 - Build the dockerfile with: `docker build -t hslproxy .`
 
-- Run `docker run -d --name HSLproxy -p 8000:80 hslproxy`
-  and the app should now be running on port 8000 of your Docker host.
+- Run `docker run -d --name HSLproxy -p 8000:80 hslproxy` and the app should
+  now be running on port 8000 of your Docker host.
 
 - For debug output, add `--env HSLPROXY_LOG_LEVEL=DEBUG` to the command.
   You can examine the logs with `docker logs HSLproxy`.
